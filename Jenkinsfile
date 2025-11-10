@@ -5,14 +5,14 @@ pipeline {
         stage('Build containers') {
             steps {
                 echo '=== Собираем контейнеры ==='
-                sh 'docker-compose build'
+                bat 'docker-compose build'
             }
         }
 
         stage('Run containers') {
             steps {
                 echo '=== Запускаем контейнеры ==='
-                sh 'docker-compose up -d'
+                bat 'docker-compose up -d'
                 echo 'Ждём, пока Flask поднимется...'
                 sleep 10
             }
@@ -21,13 +21,15 @@ pipeline {
         stage('Test Flask app') {
             steps {
                 echo '=== Проверяем доступность Flask приложения ==='
-                sh '''
-                    echo "Отправляем запрос на localhost:5000"
-                    if curl -s --head --request GET http://localhost:5000 | grep "200 OK" > /dev/null; then
-                        echo "Flask отвечает нормально!"
-                    else
-                        echo "Flask не отвечает!"; exit 1
-                    fi
+                bat '''
+                    echo Отправляем запрос на localhost:5000
+                    curl -s --head http://localhost:5000 | find "200 OK"
+                    if %ERRORLEVEL%==0 (
+                        echo Flask отвечает нормально!
+                    ) else (
+                        echo Flask не отвечает!
+                        exit /b 1
+                    )
                 '''
             }
         }
@@ -35,14 +37,14 @@ pipeline {
         stage('Check running containers') {
             steps {
                 echo '=== Проверяем запущенные контейнеры ==='
-                sh 'docker ps -a'
+                bat 'docker ps -a'
             }
         }
 
         stage('Stop containers') {
             steps {
                 echo '=== Останавливаем контейнеры ==='
-                sh 'docker-compose down'
+                bat 'docker-compose down'
             }
         }
     }
