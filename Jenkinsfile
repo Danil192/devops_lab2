@@ -2,6 +2,17 @@ pipeline {
     agent any
 
     stages {
+        stage('Clean old containers') {
+            steps {
+                echo '=== Удаляем старые контейнеры, если остались ==='
+                bat '''
+                    docker ps -a
+                    docker rm -f flask_web || echo "flask_web не найден"
+                    docker rm -f postgres_db || echo "postgres_db не найден"
+                '''
+            }
+        }
+
         stage('Build containers') {
             steps {
                 echo '=== Собираем контейнеры ==='
@@ -43,7 +54,7 @@ pipeline {
 
         stage('Stop containers') {
             steps {
-                echo '=== Останавливаем контейнеры ==='
+                echo '=== Останавливаем контейнеры и очищаем окружение ==='
                 bat 'docker-compose down'
             }
         }
