@@ -5,14 +5,6 @@ pipeline {
         DOCKER_BUILDKIT = 1
     }
 
-    stages {
-        stage('Clone project') {
-            steps {
-                echo '=== Клонируем проект из GitHub ==='
-                git 'https://github.com/Danil192/devops_lab2.git'
-            }
-        }
-
         stage('Build containers') {
             steps {
                 echo '=== Собираем контейнеры ==='
