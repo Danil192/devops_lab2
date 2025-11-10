@@ -13,6 +13,22 @@ pipeline {
             steps {
                 echo '=== Запускаем контейнеры ==='
                 sh 'docker-compose up -d'
+                echo 'Ждём, пока Flask поднимется...'
+                sleep 10
+            }
+        }
+
+        stage('Test Flask app') {
+            steps {
+                echo '=== Проверяем доступность Flask приложения ==='
+                sh '''
+                    echo "Отправляем запрос на localhost:5000"
+                    if curl -s --head --request GET http://localhost:5000 | grep "200 OK" > /dev/null; then
+                        echo "Flask отвечает нормально!"
+                    else
+                        echo "Flask не отвечает!"; exit 1
+                    fi
+                '''
             }
         }
 
@@ -33,10 +49,10 @@ pipeline {
 
     post {
         success {
-            echo 'Пайплайн выполнен успешно!'
+            echo 'Пайплайн выполнен успешно, Flask работает!'
         }
         failure {
-            echo 'Что-то пошло не так, проверь лог пайплайна.'
+            echo 'Ошибка при сборке или тестировании. Проверь логи пайплайна.'
         }
     }
 }
