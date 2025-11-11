@@ -52,12 +52,7 @@ pipeline {
             }
         }
 
-        stage('Stop containers') {
-            steps {
-                echo '=== Останавливаем контейнеры и очищаем окружение ==='
-                bat 'docker-compose down'
-            }
-        }
+
     }
 
     post {
