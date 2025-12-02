@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "danil192/flask-web"
+        DOCKER_IMAGE = "danil192/flask-web"  // Можно оставить, но не обязательно
     }
 
     stages {
@@ -17,28 +17,8 @@ pipeline {
 
         stage('Build containers') {
             steps {
-                echo '=== Собираем Docker-образ ==='
+                echo '=== Собираем Docker-образы локально ==='
                 bat 'docker-compose build'
-                bat "docker build -t ${env.DOCKER_IMAGE} ."
-            }
-        }
-
-        stage('Push to Docker Hub') {
-            steps {
-                script {
-                    echo '=== Публикуем образ на Docker Hub ==='
-                    withCredentials([usernamePassword(
-                        credentialsId: 'docker-hub-creds',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )]) {
-                        bat """
-                            echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
-                            docker push ${env.DOCKER_IMAGE}
-                            docker logout
-                        """
-                    }
-                }
             }
         }
 
@@ -87,7 +67,7 @@ pipeline {
     }
 
     post {
-        success { echo '✅ CI/CD с БД, Docker Hub и деплоем в C:\\deploy2 завершён!' }
+        success { echo '✅ CI/CD с БД и локальным деплоем в C:\\deploy2 завершён!' }
         failure { echo '❌ Ошибка в пайплайне' }
     }
 }
