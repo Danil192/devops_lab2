@@ -3,7 +3,6 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "danil192/flask-web"
-        DOCKERHUB_CREDENTIALS = credentials('docker-hub-creds')
     }
 
     stages {
@@ -28,11 +27,17 @@ pipeline {
             steps {
                 script {
                     echo '=== Публикуем образ на Docker Hub ==='
-                    bat """
-                        echo ${env.DOCKERHUB_CREDENTIALS_SECRET} | docker login -u ${env.DOCKERHUB_CREDENTIALS_USR} --password-stdin
-                        docker push ${env.DOCKER_IMAGE}
-                        docker logout
-                    """
+                    withCredentials([usernamePassword(
+                        credentialsId: 'docker-hub-creds',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )]) {
+                        bat """
+                            echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+                            docker push ${env.DOCKER_IMAGE}
+                            docker logout
+                        """
+                    }
                 }
             }
         }
