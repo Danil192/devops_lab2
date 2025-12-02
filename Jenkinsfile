@@ -45,9 +45,8 @@ pipeline {
         stage('Run containers') {
             steps {
                 echo '=== Запускаем свежие контейнеры ==='
-                // --build гарантирует, что будет использована новая сборка
                 bat 'docker-compose up -d --build'
-                sleep 10
+                sleep 15 // даём PostgreSQL время запуститься
             }
         }
 
@@ -57,7 +56,8 @@ pipeline {
                 bat '''
                     curl -s http://localhost | find "✅ Подключение к БД успешно"
                     if %ERRORLEVEL% NEQ 0 (
-                        echo Тест не пройден!
+                        echo Тест не пройден! Ответ сервера:
+                        curl -s http://localhost
                         exit /b 1
                     )
                 '''
@@ -73,6 +73,7 @@ pipeline {
                         mkdir "C:\\deploy2"
                         robocopy . "C:\\deploy2" /E /XD .git >nul
                         if %errorlevel% leq 1 exit 0
+                        exit %errorlevel%
                     """
                 }
             }
