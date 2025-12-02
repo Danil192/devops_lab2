@@ -35,21 +35,23 @@ pipeline {
             }
         }
 
-        stage('Test Flask app') {
-            steps {
-                echo '=== Testing: data from PostgreSQL is displayed ==='
-                bat '''
-                    curl -s http://localhost | findstr /I "PostgreSQL"
-                    if %ERRORLEVEL% EQU 0 (
-                        echo SUCCESS: Data from database received!
-                    ) else (
-                        echo ERROR: Data not found.
-                        curl -s http://localhost
-                        exit /b 1
-                    )
-                '''
-            }
-        }
+stage('Test Flask app') {
+    steps {
+        echo '=== Waiting for app to be ready ==='
+        bat 'timeout /t 15 /nobreak >nul'
+        echo '=== Testing: data from PostgreSQL is displayed ==='
+        bat '''
+            curl -s http://localhost | findstr /I "PostgreSQL"
+            if %ERRORLEVEL% EQU 0 (
+                echo SUCCESS: Data from database received!
+            ) else (
+                echo ERROR: Data not found.
+                curl -s http://localhost
+                exit /b 1
+            )
+        '''
+    }
+}
 
         stage('Deploy to C:\\deploy2') {
             steps {
