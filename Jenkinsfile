@@ -1,17 +1,11 @@
 pipeline {
     agent any
 
-    environment {
-        DOCKER_IMAGE = "danil192/flask-web"  // Можно оставить, но не обязательно
-    }
-
     stages {
         stage('Clean old containers') {
             steps {
                 echo '=== Полная очистка: останавливаем и удаляем всё (контейнеры, тома, сеть) ==='
-                bat '''
-                    docker-compose down --remove-orphans -v
-                '''
+                bat 'docker-compose down --remove-orphans -v'
             }
         }
 
@@ -26,17 +20,19 @@ pipeline {
             steps {
                 echo '=== Запускаем свежие контейнеры ==='
                 bat 'docker-compose up -d --build'
-                sleep 15 // даём PostgreSQL время запуститься
+                sleep 15 // даём PostgreSQL время инициализироваться
             }
         }
 
         stage('Test Flask app') {
             steps {
-                echo '=== Проверяем Flask + БД через Nginx (порт 80) ==='
+                echo '=== Проверяем, что Flask отображает данные из PostgreSQL ==='
                 bat '''
-                    curl -s http://localhost | find "✅ Подключение к БД успешно"
-                    if %ERRORLEVEL% NEQ 0 (
-                        echo Тест не пройден! Ответ сервера:
+                    curl -s http://localhost | findstr /C:"Привет из PostgreSQL" >nul
+                    if %ERRORLEVEL% EQU 0 (
+                        echo Успех: данные из базы отображаются!
+                    ) else (
+                        echo ОШИБКА: данные из БД не найдены. Ответ сервера:
                         curl -s http://localhost
                         exit /b 1
                     )
@@ -61,13 +57,18 @@ pipeline {
 
         stage('Check running') {
             steps {
+                echo '=== Текущие запущенные контейнеры ==='
                 bat 'docker ps'
             }
         }
     }
 
     post {
-        success { echo '✅ CI/CD с БД и локальным деплоем в C:\\deploy2 завершён!' }
-        failure { echo '❌ Ошибка в пайплайне' }
+        success {
+            echo '✅ CI/CD успешно завершён: Flask + PostgreSQL работают, файлы скопированы в C:\\deploy2'
+        }
+        failure {
+            echo '❌ Пайплайн завершился с ошибкой'
+        }
     }
 }
