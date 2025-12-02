@@ -1,66 +1,87 @@
 pipeline {
     agent any
 
+    environment {
+        DOCKER_IMAGE = "danil192/flask-web"
+        DOCKERHUB_CREDENTIALS = credentials('docker-hub-creds')
+    }
+
     stages {
         stage('Clean old containers') {
             steps {
-                echo '=== Удаляем старые контейнеры, если остались ==='
+                echo '=== Полная очистка: останавливаем и удаляем всё (контейнеры, тома, сеть) ==='
                 bat '''
-                    docker ps -a
-                    docker rm -f flask_web || echo "flask_web не найден"
-                    docker rm -f postgres_db || echo "postgres_db не найден"
+                    docker-compose down --remove-orphans -v
                 '''
             }
         }
 
         stage('Build containers') {
             steps {
-                echo '=== Собираем контейнеры ==='
+                echo '=== Собираем Docker-образ ==='
                 bat 'docker-compose build'
+                bat "docker build -t ${env.DOCKER_IMAGE} ."
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                script {
+                    echo '=== Публикуем образ на Docker Hub ==='
+                    bat """
+                        echo ${env.DOCKERHUB_CREDENTIALS_SECRET} | docker login -u ${env.DOCKERHUB_CREDENTIALS_USR} --password-stdin
+                        docker push ${env.DOCKER_IMAGE}
+                        docker logout
+                    """
+                }
             }
         }
 
         stage('Run containers') {
             steps {
-                echo '=== Запускаем контейнеры ==='
-                bat 'docker-compose up -d'
-                echo 'Ждём, пока Flask поднимется...'
+                echo '=== Запускаем свежие контейнеры ==='
+                // --build гарантирует, что будет использована новая сборка
+                bat 'docker-compose up -d --build'
                 sleep 10
             }
         }
 
         stage('Test Flask app') {
             steps {
-                echo '=== Проверяем доступность Flask приложения ==='
+                echo '=== Проверяем Flask + БД через Nginx (порт 80) ==='
                 bat '''
-                    echo Отправляем запрос на localhost:5000
-                    curl -s --head http://localhost:5000 | find "200 OK"
-                    if %ERRORLEVEL%==0 (
-                        echo Flask отвечает нормально!
-                    ) else (
-                        echo Flask не отвечает!
+                    curl -s http://localhost | find "✅ Подключение к БД успешно"
+                    if %ERRORLEVEL% NEQ 0 (
+                        echo Тест не пройден!
                         exit /b 1
                     )
                 '''
             }
         }
 
-        stage('Check running containers') {
+        stage('Deploy to C:\\deploy2') {
             steps {
-                echo '=== Проверяем запущенные контейнеры ==='
-                bat 'docker ps -a'
+                script {
+                    echo '=== Копируем файлы в C:\\deploy2 ==='
+                    bat """
+                        if exist "C:\\deploy2" rmdir /s /q "C:\\deploy2"
+                        mkdir "C:\\deploy2"
+                        robocopy . "C:\\deploy2" /E /XD .git >nul
+                        if %errorlevel% leq 1 exit 0
+                    """
+                }
             }
         }
 
-
+        stage('Check running') {
+            steps {
+                bat 'docker ps'
+            }
+        }
     }
 
     post {
-        success {
-            echo 'Пайплайн выполнен успешно, Flask работает!'
-        }
-        failure {
-            echo 'Ошибка при сборке или тестировании. Проверь логи пайплайна.'
-        }
+        success { echo '✅ CI/CD с БД, Docker Hub и деплоем в C:\\deploy2 завершён!' }
+        failure { echo '❌ Ошибка в пайплайне' }
     }
 }

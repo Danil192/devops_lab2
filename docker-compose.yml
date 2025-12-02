@@ -1,10 +1,21 @@
 version: '3.8'
 services:
+  nginx:
+    image: nginx:alpine
+    container_name: flask_nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - web
+    restart: always
+
   web:
     build: .
     container_name: flask_web
-    ports:
-      - "5000:5000"
+    expose:
+      - "5000"
     depends_on:
       - db
     environment:
