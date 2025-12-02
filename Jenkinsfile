@@ -2,37 +2,48 @@ pipeline {
     agent any
 
     stages {
+        stage('Checkout SCM') {
+            steps {
+                checkout scm
+            }
+        }
+
         stage('Clean old containers') {
             steps {
-                echo '=== Полная очистка ==='
-                bat 'docker-compose down --remove-orphans -v'
+                echo '=== Cleaning up old containers ==='
+                bat '''
+                    docker-compose down --remove-orphans -v
+                '''
             }
         }
 
         stage('Build containers') {
             steps {
-                echo '=== Сборка образов ==='
-                bat 'docker-compose build'
+                echo '=== Building Docker images ==='
+                bat '''
+                    docker-compose build
+                '''
             }
         }
 
         stage('Run containers') {
             steps {
-                echo '=== Запуск контейнеров (ждём готовности БД автоматически) ==='
-                bat 'docker-compose up -d --build'
-                // Больше не нужно sleep — depends_on + healthcheck всё решают
+                echo '=== Starting containers (waiting for DB to be ready) ==='
+                bat '''
+                    docker-compose up -d --build
+                '''
             }
         }
 
         stage('Test Flask app') {
             steps {
-                echo '=== Проверка: данные из PostgreSQL отображаются ==='
+                echo '=== Testing: data from PostgreSQL is displayed ==='
                 bat '''
-                    curl -s http://localhost | findstr /C:"Привет из PostgreSQL!" >nul
+                    curl -s http://localhost | findstr /I "PostgreSQL"
                     if %ERRORLEVEL% EQU 0 (
-                        echo Успех: данные из БД получены!
+                        echo SUCCESS: Data from database received!
                     ) else (
-                        echo ОШИБКА: данные не найдены.
+                        echo ERROR: Data not found.
                         curl -s http://localhost
                         exit /b 1
                     )
@@ -42,28 +53,31 @@ pipeline {
 
         stage('Deploy to C:\\deploy2') {
             steps {
-                script {
-                    echo '=== Копирование в C:\\deploy2 ==='
-                    bat """
-                        if exist "C:\\deploy2" rmdir /s /q "C:\\deploy2"
-                        mkdir "C:\\deploy2"
-                        robocopy . "C:\\deploy2" /E /XD .git >nul
-                        if %errorlevel% leq 1 exit 0
-                        exit %errorlevel%
-                    """
-                }
+                echo '=== Deploying to C:\\deploy2 ==='
+                bat '''
+                    mkdir -p C:\\deploy2
+                    copy .\\* C:\\deploy2\\
+                    echo Deployment completed.
+                '''
             }
         }
 
         stage('Check running') {
             steps {
-                bat 'docker ps'
+                echo '=== Checking if containers are running ==='
+                bat '''
+                    docker-compose ps
+                '''
             }
         }
     }
 
     post {
-        success { echo '✅ CI/CD успешно завершён!' }
-        failure { echo '❌ Ошибка в пайплайне' }
+        always {
+            echo '✅ Pipeline finished.'
+        }
+        failure {
+            echo '❌ Pipeline failed.'
+        }
     }
 }

@@ -1,43 +1,34 @@
+version: '3.8'
+
 services:
-  nginx:
+  postgres_db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: mydb
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  flask_web:
+    build: .
+    depends_on:
+      - postgres_db
+    environment:
+      - DATABASE_URL=postgresql://myuser:mypassword@postgres_db:5432/mydb
+    ports:
+      - "5000:5000"
+
+  flask_nginx:
     image: nginx:alpine
-    container_name: flask_nginx
+    depends_on:
+      - flask_web
     ports:
       - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
-    depends_on:
-      - web
-    restart: always
-
-  web:
-    build: .
-    container_name: flask_web
-    expose:
-      - "5000"
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      - DATABASE_HOST=db
-      - DATABASE_USER=postgres
-      - DATABASE_PASSWORD=postgres
-    restart: always
-
-  db:
-    image: postgres:15
-    container_name: postgres_db
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-    volumes:
-      - db_data:/var/lib/postgresql/data
-    restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 2s
-      timeout: 5s
-      retries: 20
 
 volumes:
   db_data:
