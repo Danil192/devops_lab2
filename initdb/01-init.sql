@@ -3,5 +3,6 @@ CREATE TABLE IF NOT EXISTS messages (
     message TEXT NOT NULL
 );
 
-INSERT INTO messages (id, message) VALUES (1, 'Hello from PostgreSQL!')
+INSERT INTO messages (id, message) 
+VALUES (1, 'Hello from PostgreSQL!')
 ON CONFLICT (id) DO NOTHING;

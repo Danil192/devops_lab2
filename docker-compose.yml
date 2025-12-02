@@ -21,12 +21,7 @@ services:
     depends_on:
       postgres_db:
         condition: service_healthy
-    environment:
-      DATABASE_URL: postgresql://myuser:mypassword@postgres_db:5432/mydb
     restart: on-failure
-    # Уберите публикацию порта 5000 — всё идёт через NGINX!
-    # ports:
-    #   - "5000:5000"
 
   flask_nginx:
     image: nginx:alpine
