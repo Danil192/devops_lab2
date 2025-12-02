@@ -28,7 +28,7 @@ pipeline {
             steps {
                 echo '=== Проверка: данные из PostgreSQL отображаются ==='
                 bat '''
-                    curl -s http://localhost | findstr /C:"Привет из PostgreSQL" >nul
+                    curl -s http://localhost | findstr /C:"Привет из PostgreSQL!" >nul
                     if %ERRORLEVEL% EQU 0 (
                         echo Успех: данные из БД получены!
                     ) else (
