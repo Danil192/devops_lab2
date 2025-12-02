@@ -4,35 +4,35 @@ pipeline {
     stages {
         stage('Clean old containers') {
             steps {
-                echo '=== Полная очистка: останавливаем и удаляем всё (контейнеры, тома, сеть) ==='
+                echo '=== Полная очистка ==='
                 bat 'docker-compose down --remove-orphans -v'
             }
         }
 
         stage('Build containers') {
             steps {
-                echo '=== Собираем Docker-образы локально ==='
+                echo '=== Сборка образов ==='
                 bat 'docker-compose build'
             }
         }
 
         stage('Run containers') {
             steps {
-                echo '=== Запускаем свежие контейнеры ==='
+                echo '=== Запуск контейнеров (ждём готовности БД автоматически) ==='
                 bat 'docker-compose up -d --build'
-                sleep 15 // даём PostgreSQL время инициализироваться
+                // Больше не нужно sleep — depends_on + healthcheck всё решают
             }
         }
 
         stage('Test Flask app') {
             steps {
-                echo '=== Проверяем, что Flask отображает данные из PostgreSQL ==='
+                echo '=== Проверка: данные из PostgreSQL отображаются ==='
                 bat '''
                     curl -s http://localhost | findstr /C:"Привет из PostgreSQL" >nul
                     if %ERRORLEVEL% EQU 0 (
-                        echo Успех: данные из базы отображаются!
+                        echo Успех: данные из БД получены!
                     ) else (
-                        echo ОШИБКА: данные из БД не найдены. Ответ сервера:
+                        echo ОШИБКА: данные не найдены.
                         curl -s http://localhost
                         exit /b 1
                     )
@@ -43,7 +43,7 @@ pipeline {
         stage('Deploy to C:\\deploy2') {
             steps {
                 script {
-                    echo '=== Копируем файлы в C:\\deploy2 ==='
+                    echo '=== Копирование в C:\\deploy2 ==='
                     bat """
                         if exist "C:\\deploy2" rmdir /s /q "C:\\deploy2"
                         mkdir "C:\\deploy2"
@@ -57,18 +57,13 @@ pipeline {
 
         stage('Check running') {
             steps {
-                echo '=== Текущие запущенные контейнеры ==='
                 bat 'docker ps'
             }
         }
     }
 
     post {
-        success {
-            echo '✅ CI/CD успешно завершён: Flask + PostgreSQL работают, файлы скопированы в C:\\deploy2'
-        }
-        failure {
-            echo '❌ Пайплайн завершился с ошибкой'
-        }
+        success { echo '✅ CI/CD успешно завершён!' }
+        failure { echo '❌ Ошибка в пайплайне' }
     }
 }
