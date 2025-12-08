@@ -6,7 +6,7 @@ pipeline {
             steps {
                 checkout scm
             }
-        }
+        } 
 
         stage('Clean old containers') {
             steps {
